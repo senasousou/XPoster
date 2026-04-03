@@ -1,0 +1,41 @@
+name: X Auto Poster
+
+on:
+  schedule:
+    # 8:00 JST -> 23:00 UTC (day before)
+    - cron: '0 23 * * *'
+    # 12:00 JST -> 3:00 UTC
+    - cron: '0 3 * * *'
+    # 20:00 JST -> 11:00 UTC
+    - cron: '0 11 * * *'
+  workflow_dispatch: # Allows manual trigger for testing
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare Secrets and Run
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          X_COOKIES_JSON: ${{ secrets.X_COOKIES_JSON }}
+        run: |
+          echo "$X_COOKIES_JSON" > cookies.json
+          node src/index.js
