@@ -17,25 +17,25 @@ async function run() {
   }
 
   const id = row.get('ID');
-  const category = row.get('分類') || '';
-  const itemEra = row.get('項目名・年代') || '';
-  const overview = row.get('概要') || '';
+  const itemName = row.get('項目') || '';
+  const location = row.get('場所') || '';
+  const overview = row.get('内容の要約') || '';
 
-  // Format Tags
-  const tags = category.split('・').map(t => `#${t.trim()}`).join(' ');
+  // Format Tags (Since Category is gone, use location as a tag)
+  const tags = location ? `#${location.replace(/\s+/g, '')}` : '';
 
-  // Format Tweet Text: 【項目名・年代】\n概要\n\n#タグ
-  const tweetText = `【${itemEra}】\n${overview}\n\n${tags}`;
+  // Format Tweet Text
+  const tweetText = `【${itemName}】\n${overview}\n\n${tags}`;
 
-  console.log(`Processing ID ${id}: ${itemEra}`);
+  console.log(`Processing ID ${id}: ${itemName}`);
 
   // 1. Analyze text for slides using OpenAI
   console.log('Analyzing text for slides...');
-  const slideData = await analyzeTextForSlides(itemEra, overview);
+  const slideData = await analyzeTextForSlides(itemName, location, overview);
   console.log('Analysis Complete:', JSON.stringify(slideData, null, 2));
 
   // 2. Generate 4 Images (Anime style)
-  const imagePaths = await generateAnimeImage(itemEra);
+  const imagePaths = await generateAnimeImage(itemName);
 
   if (!imagePaths || imagePaths.length === 0) {
     console.log('No images generated. Aborting post.');
