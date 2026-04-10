@@ -82,7 +82,6 @@ async function run() {
 
     // Type Text Human-Lile
     console.log('Typing tweet...');
-    const editor = page.locator('div[data-testid="tweetTextarea_0"]');
     await editor.click();
     await typeHumanLike(page, editor, tweetText);
 
