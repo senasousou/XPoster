@@ -25,7 +25,21 @@ async function setupSheet() {
  */
 async function getNextPost(sheet) {
   const rows = await sheet.getRows();
-  return rows.find(row => !row.get('ステータス') || row.get('ステータス').trim() === '');
+  console.log(`Total rows fetched: ${rows.length}`);
+
+  for (let i = 0; i < rows.length; i++) {
+    const status = rows[i].get('ステータス');
+    console.log(`Row ${i + 1} status: [${status}]`);
+  }
+
+  const nextRow = rows.find(row => !row.get('ステータス') || row.get('ステータス').trim() === '');
+  if (nextRow) {
+    console.log(`Found row to post: ID ${nextRow.get('ID')}`);
+  } else {
+    console.log('No eligible row found to post.');
+  }
+
+  return nextRow;
 }
 
 /**
