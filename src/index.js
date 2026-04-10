@@ -57,25 +57,23 @@ async function run() {
   const page = await context.newPage();
 
   try {
-    console.log('Navigating to X.com...');
-    await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(5000); // 最初のロードを少し待つ
+    console.log('Navigating directly to X.com compose page...');
+    await page.goto('https://x.com/compose/tweet', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(5000);
 
-    // X特有の「クッキー直接注入による無限ローディング（くるくる）」を回避するためのリロード
-    console.log('Reloading page to clear infinite spinner...');
+    // リロードによる無限ローディングの回避
+    console.log('Reloading page to clear any infinite spinners...');
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(5000);
     
-    // Check if logged in (if not, we'll see the login button)
-    if (await page.locator('data-testid=SideNav_NewTweet_Button').isVisible({ timeout: 15000 }).catch(() => false)) {
-      console.log('Logged in successfully via cookies.');
+    // Check if logged in by looking for the tweet textarea
+    const editor = page.locator('div[data-testid="tweetTextarea_0"]');
+    if (await editor.isVisible({ timeout: 15000 }).catch(() => false)) {
+      console.log('Logged in successfully and compose window is open.');
     } else {
-      throw new Error('X Login failed. Please update cookies.json.');
+      throw new Error('X Login failed (or textbox not found). Please update cookies.json.');
     }
 
-    // Click Post Button
-    await page.click('data-testid=SideNav_NewTweet_Button');
-    
     // Upload Images
     console.log(`Uploading ${imagePaths.length} images to X...`);
     const fileInput = page.locator('input[data-testid="fileInput"]');
