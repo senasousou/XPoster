@@ -39,3 +39,12 @@ jobs:
         run: |
           echo "$X_COOKIES_JSON" > cookies.json
           node src/index.js
+
+      - name: Upload error screenshots (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: |
+            x_error.png
+          retention-days: 7

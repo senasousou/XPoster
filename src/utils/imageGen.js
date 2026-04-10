@@ -8,39 +8,51 @@ const openai = new OpenAI({
 });
 
 /**
- * Generates an image using DALL-E 3 based on the prompt, enhanced with anime style.
+ * Generates 4 images using DALL-E 3 based on the prompt, enhanced with anime style.
  * @param {string} text - The core prompt from the spreadsheet.
- * @returns {Promise<string>} - Path to the downloaded image file.
+ * @returns {Promise<string[]>} - Array of paths to the downloaded image files.
  */
 async function generateAnimeImage(text) {
   const enhancedPrompt = `${text}, high quality anime style, detailed illustration, vibrant colors, clean lines`;
+  const imagePaths = [];
   
-  console.log(`Generating image for prompt: "${enhancedPrompt}"...`);
+  console.log(`Generating 4 images for prompt: "${enhancedPrompt}"...`);
   
-  const response = await openai.images.generate({
-    model: "dall-e-3",
-    prompt: enhancedPrompt,
-    n: 1,
-    size: "1024x1024",
-  });
-
-  const imageUrl = response.data[0].url;
-  const imagePath = path.join(process.cwd(), 'temp_image.png');
-  
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(imagePath);
-    https.get(imageUrl, (res) => {
-      res.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        console.log(`Image saved to ${imagePath}`);
-        resolve(imagePath);
+  for (let i = 0; i < 4; i++) {
+    console.log(`Generating image ${i + 1} of 4...`);
+    try {
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1, // DALL-E 3 only supports n=1 per request
+        size: "1024x1024",
       });
-    }).on('error', (err) => {
-      fs.unlink(imagePath, () => {});
-      reject(err);
-    });
-  });
+
+      const imageUrl = response.data[0].url;
+      const imagePath = path.join(process.cwd(), `temp_image_${i}.png`);
+      
+      await new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(imagePath);
+        https.get(imageUrl, (res) => {
+          res.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            console.log(`Image ${i + 1} saved to ${imagePath}`);
+            imagePaths.push(imagePath);
+            resolve();
+          });
+        }).on('error', (err) => {
+          fs.unlink(imagePath, () => {});
+          reject(err);
+        });
+      });
+    } catch (error) {
+      console.error(`Failed to generate image ${i + 1}:`, error);
+      // Continue trying to generate the rest even if one fails
+    }
+  }
+
+  return imagePaths;
 }
 
 module.exports = { generateAnimeImage };

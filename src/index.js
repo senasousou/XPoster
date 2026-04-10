@@ -3,6 +3,8 @@ const { chromium } = require('playwright');
 const { setupSheet, getNextPost, markAsPosted } = require('./utils/sheets');
 const { generateAnimeImage } = require('./utils/imageGen');
 const { typeHumanLike } = require('./utils/humanTyping');
+const { analyzeTextForSlides } = require('./utils/textAnalyzer');
+const { overlayText } = require('./utils/imageOverlay');
 const fs = require('fs');
 
 async function run() {
@@ -27,10 +29,24 @@ async function run() {
 
   console.log(`Processing ID ${id}: ${itemEra}`);
 
-  // 1. Generate Image (Anime style)
-  const imagePath = await generateAnimeImage(itemEra);
+  // 1. Analyze text for slides using OpenAI
+  console.log('Analyzing text for slides...');
+  const slideData = await analyzeTextForSlides(itemEra, overview);
+  console.log('Analysis Complete:', JSON.stringify(slideData, null, 2));
 
-  // 2. Playwright Automation
+  // 2. Generate 4 Images (Anime style)
+  const imagePaths = await generateAnimeImage(itemEra);
+
+  if (!imagePaths || imagePaths.length === 0) {
+    console.log('No images generated. Aborting post.');
+    return;
+  }
+
+  // 3. Synthesize typography (burn text onto images)
+  console.log('Synthesizing text onto images...');
+  await overlayText(imagePaths, id, itemEra, slideData);
+
+  // 4. Playwright Automation - X / Twitter
   const browser = await chromium.launch({ headless: true }); // GitHub Actions runs headless
   // Load session cookies from a JSON file (passed as secret)
   const context = await browser.newContext({
@@ -45,20 +61,20 @@ async function run() {
     await page.goto('https://x.com/home');
     
     // Check if logged in (if not, we'll see the login button)
-    if (await page.locator('data-testid=SideNav_NewTweet_Button').isVisible({ timeout: 15000 })) {
+    if (await page.locator('data-testid=SideNav_NewTweet_Button').isVisible({ timeout: 15000 }).catch(() => false)) {
       console.log('Logged in successfully via cookies.');
     } else {
-      throw new Error('Login failed. Please update cookies.');
+      throw new Error('X Login failed. Please update cookies.json.');
     }
 
     // Click Post Button
     await page.click('data-testid=SideNav_NewTweet_Button');
     
-    // Upload Image
-    console.log('Uploading image...');
-    const fileInput = await page.locator('input[data-testid="fileInput"]');
-    await fileInput.setInputFiles(imagePath);
-    await page.waitForTimeout(3000); // Wait for upload processing
+    // Upload Images
+    console.log(`Uploading ${imagePaths.length} images to X...`);
+    const fileInput = page.locator('input[data-testid="fileInput"]');
+    await fileInput.setInputFiles(imagePaths);
+    await page.waitForTimeout(3000 * imagePaths.length); // Wait for upload processing
 
     // Type Text Human-Lile
     console.log('Typing tweet...');
@@ -73,16 +89,24 @@ async function run() {
     await page.waitForTimeout(5000); // Wait for post to complete
     console.log('Tweet sent successfully!');
 
-    // 3. Mark as Posted in Sheets
+    // 5. Mark as Posted in Sheets
     await markAsPosted(row);
     console.log('Spreadsheet updated.');
 
   } catch (error) {
-    console.error('An error occurred during the automation process:', error);
-    process.exit(1);
+    console.error('An error occurred during the X automation process:', error);
+    // Take screenshot on failure for debugging
+    await page.screenshot({ path: 'x_error.png' }).catch(() => {});
   } finally {
     await browser.close();
-    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+  }
+
+  // 6. Cleanup Downloaded Images
+  for (const imgPath of imagePaths) {
+    if (fs.existsSync(imgPath)) {
+      fs.unlinkSync(imgPath);
+      console.log(`Cleaned up temp image: ${imgPath}`);
+    }
   }
 }
 
