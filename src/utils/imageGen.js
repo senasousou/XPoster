@@ -19,7 +19,7 @@ async function generateAnimeImage(text) {
   
   try {
     const response = await ai.models.generateImages({
-      model: "imagen-3.0-generate-001",
+      model: "imagen-4.0-generate-001",
       prompt: enhancedPrompt,
       config: {
         numberOfImages: 4,
