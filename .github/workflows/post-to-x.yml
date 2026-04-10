@@ -30,23 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: List available Gemini models (debug)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          node -e "
-          const { GoogleGenAI } = require('@google/genai');
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-          async function run() {
-            console.log('--- Available Models ---');
-            const resp = await ai.models.list();
-            for await (const m of resp) {
-              console.log(m.name, '|', m.supportedGenerationMethods);
-            }
-          }
-          run().catch(console.error);
-          "
-
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 

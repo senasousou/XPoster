@@ -47,10 +47,23 @@ async function run() {
   await overlayText(imagePaths, id, itemName, slideData);
 
   // 4. Playwright Automation - X / Twitter
-  const browser = await chromium.launch({ headless: true }); // GitHub Actions runs headless
-  // Load session cookies from a JSON file (passed as secret)
+  const browser = await chromium.launch({ headless: true });
+  
+  // クッキーの形式を柔軟に処理（JSONが配列のみの場合でもPlaywright形式に直す）
+  let storageState = { cookies: [], origins: [] };
+  try {
+    const rawCookies = JSON.parse(fs.readFileSync('cookies.json', 'utf8'));
+    if (Array.isArray(rawCookies)) {
+      storageState.cookies = rawCookies;
+    } else {
+      storageState = rawCookies;
+    }
+  } catch (e) {
+    console.warn('Could not parse cookies.json, starting with empty state.');
+  }
+
   const context = await browser.newContext({
-    storageState: 'cookies.json',
+    storageState,
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
   });
   
