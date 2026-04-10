@@ -32,7 +32,7 @@ async function analyzeTextForSlides(itemName, location, overview) {
 `;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await ai.models.generateContent({
       model: "gemini-3.1-flash",
       contents: prompt,
       config: {
@@ -41,15 +41,28 @@ async function analyzeTextForSlides(itemName, location, overview) {
       }
     });
 
-    const parsed = JSON.parse(response.text);
+    // The new @google/genai SDK response handling
+    const text = result.text;
+    console.log("Raw AI Response:", text);
+    
+    if (!text) {
+      throw new Error("AI returned empty text");
+    }
+
+    const parsed = JSON.parse(text);
     return parsed;
   } catch (error) {
     console.error("Text Analysis Error (Gemini):", error);
+    // Log the full structure if it's an API error
+    if (error.response) {
+      console.log("Full Error Response:", JSON.stringify(error.response, null, 2));
+    }
+    
     // Fallback if AI fails:
     return {
       slide2: location || itemName,
-      slide3: ["(テキスト抽出に失敗しました)"],
-      slide4: ["(テキスト抽出に失敗しました)"]
+      slide3: ["時系列の出来事を抽出中..."],
+      slide4: ["(詳細データをご確認ください)"]
     };
   }
 }
