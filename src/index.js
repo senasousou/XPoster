@@ -1,9 +1,8 @@
 require('dotenv').config();
-const { chromium } = require('playwright');
 const { setupSheet, getNextPost, markAsPosted } = require('./utils/sheets');
 const { generateAnimeImage } = require('./utils/imageGen');
-const { typeHumanLike } = require('./utils/humanTyping');
 const { analyzeTextForSlides } = require('./utils/textAnalyzer');
+const xApi = require('./utils/xApi');
 const { overlayText } = require('./utils/imageOverlay');
 const fs = require('fs');
 
@@ -46,75 +45,16 @@ async function run() {
   console.log('Synthesizing text onto images...');
   await overlayText(imagePaths, id, itemName, slideData);
 
-  // 4. Playwright Automation - X / Twitter
-  const browser = await chromium.launch({ headless: true });
-  
-  // クッキーの形式を柔軟に処理（JSONが配列のみの場合でもPlaywright形式に直す）
-  let storageState = { cookies: [], origins: [] };
+  // 4. X / Twitter API Automation
   try {
-    const rawCookies = JSON.parse(fs.readFileSync('cookies.json', 'utf8'));
-    if (Array.isArray(rawCookies)) {
-      storageState.cookies = rawCookies;
-    } else {
-      storageState = rawCookies;
-    }
-  } catch (e) {
-    console.warn('Could not parse cookies.json, starting with empty state.');
-  }
-
-  const context = await browser.newContext({
-    storageState,
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-  });
-  
-  const page = await context.newPage();
-
-  try {
-    console.log('Navigating directly to X.com compose page...');
-    await page.goto('https://x.com/compose/tweet', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(5000);
-
-    // リロードによる無限ローディングの回避
-    console.log('Reloading page to clear any infinite spinners...');
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(5000);
-    
-    // Check if logged in by looking for the tweet textarea
-    const editor = page.locator('div[data-testid="tweetTextarea_0"]');
-    if (await editor.isVisible({ timeout: 15000 }).catch(() => false)) {
-      console.log('Logged in successfully and compose window is open.');
-    } else {
-      throw new Error('X Login failed (or textbox not found). Please update cookies.json.');
-    }
-
-    // Upload Images
-    console.log(`Uploading ${imagePaths.length} images to X...`);
-    const fileInput = page.locator('input[data-testid="fileInput"]');
-    await fileInput.setInputFiles(imagePaths);
-    await page.waitForTimeout(3000 * imagePaths.length); // Wait for upload processing
-
-    // Type Text Human-Lile
-    console.log('Typing tweet...');
-    await editor.click();
-    await typeHumanLike(page, editor, tweetText);
-
-    // Click Tweet Button
-    console.log('Sending tweet...');
-    await page.click('data-testid=tweetButton');
-    
-    await page.waitForTimeout(5000); // Wait for post to complete
-    console.log('Tweet sent successfully!');
+    await xApi.postTweetWithImages(imagePaths, tweetText);
 
     // 5. Mark as Posted in Sheets
     await markAsPosted(row);
     console.log('Spreadsheet updated.');
 
   } catch (error) {
-    console.error('An error occurred during the X automation process:', error);
-    // Take screenshot on failure for debugging
-    await page.screenshot({ path: 'x_error.png' }).catch(() => {});
-  } finally {
-    await browser.close();
+    console.error('An error occurred during the X API process:', error);
   }
 
   // 6. Cleanup Downloaded Images
