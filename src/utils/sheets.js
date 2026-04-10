@@ -5,13 +5,17 @@ const { JWT } = require('google-auth-library');
  * Sets up and returns the Google Sheet document instance.
  */
 async function setupSheet() {
+  const email = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '').trim();
+  const key = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim().replace(/\\n/g, '\n');
+  const spreadsheetId = (process.env.SPREADSHEET_ID || '').trim();
+
   const serviceAccountAuth = new JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    email,
+    key,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 
-  const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, serviceAccountAuth);
+  const doc = new GoogleSpreadsheet(spreadsheetId, serviceAccountAuth);
   await doc.loadInfo();
   return doc.sheetsByIndex[0]; // Assume first sheet
 }
