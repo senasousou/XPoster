@@ -44,7 +44,7 @@ async function run() {
 
   // 3. Synthesize typography (burn text onto images)
   console.log('Synthesizing text onto images...');
-  await overlayText(imagePaths, id, itemEra, slideData);
+  await overlayText(imagePaths, id, itemName, slideData);
 
   // 4. Playwright Automation - X / Twitter
   const browser = await chromium.launch({ headless: true }); // GitHub Actions runs headless
