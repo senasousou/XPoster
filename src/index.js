@@ -58,7 +58,13 @@ async function run() {
 
   try {
     console.log('Navigating to X.com...');
-    await page.goto('https://x.com/home');
+    await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(5000); // 最初のロードを少し待つ
+
+    // X特有の「クッキー直接注入による無限ローディング（くるくる）」を回避するためのリロード
+    console.log('Reloading page to clear infinite spinner...');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(5000);
     
     // Check if logged in (if not, we'll see the login button)
     if (await page.locator('data-testid=SideNav_NewTweet_Button').isVisible({ timeout: 15000 }).catch(() => false)) {
