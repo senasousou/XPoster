@@ -34,7 +34,7 @@ async function analyzeTextForSlides(itemName, location, overview) {
   try {
     console.log("Sending request to Gemini...");
     const result = await ai.models.generateContent({
-      model: "gemini-3.1-flash",
+      model: "gemini-1.5-flash",
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
