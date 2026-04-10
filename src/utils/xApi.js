@@ -11,33 +11,16 @@ class XApiManager {
   }
 
   /**
-   * Uploads multiple images and posts a tweet
-   * @param {string[]} imagePaths Array of local file paths to images
+   * Posts a text-only tweet
    * @param {string} tweetText The body of the tweet
    */
-  async postTweetWithImages(imagePaths, tweetText) {
-    console.log('Uploading images to X via API...');
-    const mediaIds = [];
-
-    // Upload each image sequentially (v1.1 API)
-    for (const imagePath of imagePaths) {
-      console.log(`Uploading: ${imagePath}`);
-      const mediaId = await this.client.v1.uploadMedia(imagePath);
-      mediaIds.push(mediaId);
-    }
-
-    console.log(`Successfully uploaded ${mediaIds.length} images.`);
-
-    // Post the tweet with attached media (v2 API)
-    console.log('Publishing tweet...');
-    const result = await this.client.v2.tweet({
-      text: tweetText,
-      media: { media_ids: mediaIds }
-    });
-
-    console.log('Tweet published successfully!', result.data.id);
+  async postTweet(tweetText) {
+    console.log('Publishing tweet via X API...');
+    const result = await this.client.v2.tweet({ text: tweetText });
+    console.log('Tweet published successfully! ID:', result.data.id);
     return result;
   }
 }
 
 module.exports = new XApiManager();
+
