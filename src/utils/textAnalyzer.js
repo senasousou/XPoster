@@ -26,37 +26,41 @@ async function analyzeTextForSlides(itemName, location, overview) {
 {
   "slide2": "時代や場所の情報（例：〇〇での出来事など。短くまとめる）",
   "slide3": ["出来事1", "出来事2"], // 時系列の前半の出来事を箇条書きで2〜3個
-  "slide4": ["出来事3", "出来事4"]  // 時系列の後半の出来事を箇条書きで2〜3個
+  "slide4": ["出来事3", "出来事4"]  // 時系列の前半の出来事を箇条書きで2〜3個（3枚目の続き）
 }
 箇条書き（配列内）の一つ一つの文は、画像に入れやすいように20〜40文字程度の簡潔な長さにしてください。
 `;
 
   try {
+    console.log("Sending request to Gemini...");
     const result = await ai.models.generateContent({
       model: "gemini-3.1-flash",
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
         temperature: 0.7
       }
     });
 
-    // The new @google/genai SDK response handling
-    const text = result.text;
-    console.log("Raw AI Response:", text);
+    // Detailed debug logging
+    console.log("Gemini Result Object Keys:", Object.keys(result));
     
-    if (!text) {
-      throw new Error("AI returned empty text");
+    // In @google/genai, the text might be at result.text or needs deeper access
+    let text = "";
+    if (result.text) {
+      text = result.text;
+    } else if (result.candidates && result.candidates[0].content.parts[0].text) {
+      text = result.candidates[0].content.parts[0].text;
+    } else {
+      console.log("Full result for inspection:", JSON.stringify(result, null, 2));
+      throw new Error("Could not find text in Gemini response");
     }
 
+    console.log("Raw AI Response Text:", text);
     const parsed = JSON.parse(text);
     return parsed;
   } catch (error) {
     console.error("Text Analysis Error (Gemini):", error);
-    // Log the full structure if it's an API error
-    if (error.response) {
-      console.log("Full Error Response:", JSON.stringify(error.response, null, 2));
-    }
     
     // Fallback if AI fails:
     return {
