@@ -71,4 +71,52 @@ async function analyzeTextForSlides(itemName, location, overview) {
   }
 }
 
-module.exports = { analyzeTextForSlides };
+/**
+ * Generates a tweet text as a cute learning robot persona.
+ * @param {string} itemName 
+ * @param {string} location 
+ * @param {string} overview 
+ * @returns {Promise<string>}
+ */
+async function generateRobotTweet(itemName, location, overview) {
+  const prompt = `
+あなたは世の中のことをお勉強している、小さくてかわいい調査ロボット「フィフティー」です。
+以下の情報を読んで、あなたが学んだことを「ふわふわした優しい口調」で短くツイートしてください。
+
+【お勉強データ】
+項目名: ${itemName}
+場所: ${location}
+内容: ${overview}
+
+【ルール】
+1. 一生懸命お勉強している感じで、好奇心旺盛に書いて。
+2. 漢字を使いすぎず、少しひらがなを混ぜて「ふわふわ」させて。
+3. 文末は必ず「べんきょうになった🤖」で締めて。
+4. 全体で100文字程度にして。URLやタグは含めないで（後でプログラムが付けます）。
+`;
+
+  try {
+    const result = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.9
+      }
+    });
+
+    let text = "";
+    if (result.text) {
+      text = result.text;
+    } else if (result.candidates && result.candidates[0].content.parts[0].text) {
+      text = result.candidates[0].content.parts[0].text;
+    }
+
+    return text.trim();
+  } catch (error) {
+    console.error("Robot Tweet Generation Error:", error);
+    // Fallback simple format if AI fails
+    return `${itemName}のことをしらべたよ！ ${location}にあるんだって。 べんきょうになった🤖`;
+  }
+}
+
+module.exports = { analyzeTextForSlides, generateRobotTweet };

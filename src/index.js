@@ -1,6 +1,5 @@
-require('dotenv').config();
 const { setupSheet, getNextPost, markAsPosted } = require('./utils/sheets');
-const { analyzeTextForSlides } = require('./utils/textAnalyzer');
+const { analyzeTextForSlides, generateRobotTweet } = require('./utils/textAnalyzer');
 const xApi = require('./utils/xApi');
 
 async function run() {
@@ -17,30 +16,34 @@ async function run() {
   const location = row.get('場所') || '';
   const overview = row.get('内容の要約') || '';
 
+  console.log(`Processing ID ${id}: ${itemName}`);
+
+  // 1. Generate Robot Persona Tweet
+  console.log('Generating robot persona tweet...');
+  const robotText = await generateRobotTweet(itemName, location, overview);
+
   // Format Tags
   const tags = location ? `#${location.replace(/\s+/g, '')}` : '';
+  const tweetText = `${robotText}\n\n#Record134 ${tags}`;
 
-  // Format Tweet Text (Xの文字数制限は280文字なので要約を短く)
-  const tweetText = `【${itemName}】\n${overview.slice(0, 200)}\n\n${tags}`;
-
-  console.log(`Processing ID ${id}: ${itemName}`);
   console.log(`Tweet preview:\n${tweetText}`);
 
-  // 1. Analyze text for slides (Gemini) - for future use / log only
+  // 2. Analyze text for slides (Gemini) - for future/Instagram use
   console.log('Analyzing text for slides...');
   const slideData = await analyzeTextForSlides(itemName, location, overview);
-  console.log('Analysis Complete:', JSON.stringify(slideData, null, 2));
+  console.log('Analysis Complete (for reference):', JSON.stringify(slideData, null, 2));
 
-  // 2. Post to X via API (text-only)
+  // 3. Post to X via API (text-only, Pay Per Use model)
   try {
     await xApi.postTweet(tweetText);
 
-    // 3. Mark as Posted in Sheets
+    // 4. Mark as Posted in Sheets
     await markAsPosted(row);
     console.log('Spreadsheet updated.');
 
   } catch (error) {
     console.error('An error occurred during the X API process:', error);
+    console.log('TIP: Check if you have added credit to your X Developer account (Pay Per Use model).');
   }
 }
 
