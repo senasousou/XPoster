@@ -15,9 +15,9 @@ class XApiManager {
    * @param {string} tweetText The body of the tweet
    */
   async postTweet(tweetText) {
-    console.log('Publishing tweet via X API...');
-    const result = await this.client.v2.tweet({ text: tweetText });
-    console.log('Tweet published successfully! ID:', result.data.id);
+    console.log('Publishing tweet via X API (v1.1)...');
+    const result = await this.client.v1.tweet(tweetText);
+    console.log('Tweet published successfully! ID:', result.id_str);
     return result;
   }
 }
