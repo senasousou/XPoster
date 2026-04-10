@@ -1,7 +1,7 @@
-const OpenAI = require('openai');
+const { GoogleGenAI } = require('@google/genai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 /**
@@ -32,20 +32,22 @@ async function analyzeTextForSlides(itemName, location, overview) {
 `;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.7,
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.7
+      }
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content);
+    const parsed = JSON.parse(response.text);
     return parsed;
   } catch (error) {
-    console.error("Text Analysis Error:", error);
+    console.error("Text Analysis Error (Gemini):", error);
     // Fallback if AI fails:
     return {
-      slide2: itemEra,
+      slide2: location || itemName,
       slide3: ["(テキスト抽出に失敗しました)"],
       slide4: ["(テキスト抽出に失敗しました)"]
     };
